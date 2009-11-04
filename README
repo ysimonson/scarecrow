@@ -1,0 +1,25 @@
+== ABOUT ==
+Scarecrow is a key-value store with support for custom indexes that runs on top
+of MySQL. It is inspired by an article about how FriendFeed uses MySQL to store
+schema-less data: http://bret.appspot.com/entry/how-friendfeed-uses-mysql
+
+== WHY ANOTHER KEY-VALUE STORE ==
+For my research work, I needed the following from a datastore:
+
+1) The ability to store schema-less data. In implementing various prototypes,
+   I found the use of schema-less data greatly reduced the amount of code I had
+   to write, even compared to ORMs.
+   
+2) The ability to have custom indexes so I could run special queries on my
+   data. A stupid key-value store would not do.
+   
+3) Speed. Get requests had to be especially fast.
+
+4) The ability to swap out datastore implementations. Right now it runs only on
+   MySQL, but in the future I might want to test out my research project on
+   redis on GAE. Scarecrow allows me to abstract away the underlying
+   engine.
+   
+== DEPENDENCIES ==
+* Tornado <http://www.tornadoweb.org/>
+* MySQLdb <http://sourceforge.net/projects/mysql-python/>
