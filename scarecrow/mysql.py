@@ -1,6 +1,5 @@
 from tornado import database
-import hashlib
-import datetime
+import hashlib, datetime, scarecrow
 
 #Try to import cPickle first because it's faster
 try:
@@ -44,13 +43,17 @@ class Model(object):
         
         #Install the schema for each of the indexes
         for index in self.indexes:
-            if drop: db.execute("DROP TABLE IF EXISTS %s" % index)
+            if drop:
+                db.execute("DROP TABLE IF EXISTS %s" % index)
+            
             self.indexes[index].install(db)
         
         db.close()
         
     def __contains__(self, obj_id):
+        obj_id = scarecrow.ident(obj_id)
         db = self._connect()
+        
         result = db.get("SELECT COUNT(id) AS count FROM entities WHERE id=%s LIMIT 1", obj_id)
         count = result.count
         
@@ -75,16 +78,21 @@ class Model(object):
         return count
         
     def __getitem__(self, obj_id):
+        obj_id = scarecrow.ident(obj_id)
         db = self._connect()
         
         result = db.get("SELECT body FROM entities WHERE id=%s LIMIT 1", obj_id)
-        if result == None: return None
+        
+        if result == None:
+            raise KeyError()
+        
         obj = pickle.loads(result.body)
         
         db.close()
         return obj
     
     def __setitem__(self, obj_id, obj):
+        obj_id = scarecrow.ident(obj_id)
         db = self._connect()
         obj_body = pickle.dumps(obj)
         
@@ -104,7 +112,11 @@ class Model(object):
         db.close()
     
     def __delitem__(self, obj_id):
+        obj_id = scarecrow.ident(obj_id)
         db = self._connect()
+        
+        if not obj_id in self:
+            raise KeyError()
         
         #Delete any index data for the object
         for index in self.indexes:
@@ -118,11 +130,12 @@ class Model(object):
         """
         Gets the time in which the object identified by obj_id was last updated
         """
+        obj_id = scarecrow.ident(obj_id)
         db = self._connect()
         
         result = db.get("SELECT updated FROM entities WHERE id=%s LIMIT 1", obj_id)
         if result == None:
-            updated = None
+            raise KeyError()
         else:
             updated = result.updated
             
@@ -186,14 +199,16 @@ class AttributeIndex(object):
         results = db.query("SELECT entity_id FROM %s WHERE %s=%s" % (self.name, self.property, '%s'), value)
         
         if results == None: return
-        for row in results: yield row.entity_id
+        for row in results:
+            yield scarecrow.ScarecrowIdent(row.entity_id)
     
     def get_range(self, db, start, end):
         """Gets a list of objects by a range of values for an attribute"""
         results = db.query("SELECT body FROM entities JOIN %s ON entities.id=%s.entity_id WHERE %s>=%s AND %s<=%s"
                            % (self.name, self.name, self.property, '%s', self.property, '%s'), start, end)
         
-        if results == None: return
+        if results == None:
+            return
         
         for row in results:
             yield pickle.loads(row.body)
@@ -204,7 +219,8 @@ class AttributeIndex(object):
                            % (self.name, self.property, '%s', self.property, '%s'), start, end)
         
         if results == None: return
-        for row in results: yield row.entity_id
+        for row in results:
+            yield scarecrow.ScarecrowIdent(row.entity_id)
 
 datatype_dict = {
     int: 'INT',
