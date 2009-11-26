@@ -65,7 +65,7 @@ class Model(object):
         results = db.query("SELECT id FROM entities")
         
         for row in results:
-            yield row.id
+            yield scarecrow.ScarecrowIdent(row.id)
             
         db.close()
     
